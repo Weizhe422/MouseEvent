@@ -4,8 +4,6 @@
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QDebug>
-#include <QDrag>
-#include <QMimeData>
 
 // Static variables to track drag state
 static bool isDragging = false;
@@ -150,10 +148,14 @@ void ImageProcessor::mouseDoubleClickEvent(QMouseEvent *event){
     statusBar()->showMessage(tr("雙擊:")+str,1000);
 }
 void ImageProcessor::mouseMoveEvent(QMouseEvent *event){
-    int gray = qGray(img.pixel(event->x(),event->y()));
-    QString str = "(" + QString::number(event->x()) +", " + QString::number(event->y()) + ")" + " = "+QString::number(gray);
-
-    MousePosLabel->setText(str);
+    if(!img.isNull()) {
+        int gray = qGray(img.pixel(event->x(),event->y()));
+        QString str = "(" + QString::number(event->x()) +", " + QString::number(event->y()) + ")" + " = "+QString::number(gray);
+        MousePosLabel->setText(str);
+    } else {
+        QString str = "(" + QString::number(event->x()) +", " + QString::number(event->y()) + ")";
+        MousePosLabel->setText(str);
+    }
     
     // Check if left button is pressed and we've moved enough to start dragging
     if ((event->buttons() & Qt::LeftButton) && !isDragging) {
@@ -184,12 +186,16 @@ void ImageProcessor::mouseReleaseEvent(QMouseEvent *event){
     
     // If we were dragging, open the geometry transform window
     if (isDragging && event->button() == Qt::LeftButton) {
-        isDragging = false;
         if(!img.isNull()) {
             gWin->srcImg = img;
             gWin->inWin->setPixmap(QPixmap::fromImage(gWin->srcImg));
             gWin->show();
             statusBar()->showMessage(tr("開啟幾何轉換視窗"), 2000);
         }
+    }
+    
+    // Reset drag flag when left button is released
+    if (event->button() == Qt::LeftButton) {
+        isDragging = false;
     }
 }
