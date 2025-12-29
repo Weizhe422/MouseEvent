@@ -4,6 +4,12 @@
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QDebug>
+#include <QDrag>
+#include <QMimeData>
+
+// Static variables to track drag state
+static bool isDragging = false;
+static QPoint dragStartPos;
 
 ImageProcessor::ImageProcessor(QWidget *parent)
     : QMainWindow(parent)
@@ -148,11 +154,22 @@ void ImageProcessor::mouseMoveEvent(QMouseEvent *event){
     QString str = "(" + QString::number(event->x()) +", " + QString::number(event->y()) + ")" + " = "+QString::number(gray);
 
     MousePosLabel->setText(str);
+    
+    // Check if left button is pressed and we've moved enough to start dragging
+    if ((event->buttons() & Qt::LeftButton) && !isDragging) {
+        int distance = (event->pos() - dragStartPos).manhattanLength();
+        if (distance >= 10) { // Start drag if moved at least 10 pixels
+            isDragging = true;
+        }
+    }
 }
 void ImageProcessor::mousePressEvent(QMouseEvent *event){
     QString str = "(" + QString::number(event->x()) +", " + QString::number(event->y()) + ")";
     if(event->button()==Qt::LeftButton){
         statusBar()->showMessage(tr("左鍵:")+str,1000);
+        // Start drag detection
+        isDragging = false;
+        dragStartPos = event->pos();
     }
     else if(event->button()==Qt::RightButton){
         statusBar()->showMessage(tr("右鍵:")+str,1000);
@@ -164,4 +181,15 @@ void ImageProcessor::mousePressEvent(QMouseEvent *event){
 void ImageProcessor::mouseReleaseEvent(QMouseEvent *event){
     QString str = "(" + QString::number(event->x()) +", " + QString::number(event->y()) + ")";
     statusBar()->showMessage(tr("釋放:")+str,1000);
+    
+    // If we were dragging, open the geometry transform window
+    if (isDragging && event->button() == Qt::LeftButton) {
+        isDragging = false;
+        if(!img.isNull()) {
+            gWin->srcImg = img;
+            gWin->inWin->setPixmap(QPixmap::fromImage(gWin->srcImg));
+            gWin->show();
+            statusBar()->showMessage(tr("開啟幾何轉換視窗"), 2000);
+        }
+    }
 }
